@@ -1,0 +1,121 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<!-- ==== #24. mapper 기본설정 ==== -->
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd"> 
+
+<!-- ==== #25. 루트 엘리먼트 & 네임스페이스 설정(프로젝트 전체내에서 유일해야 한다.) ==== -->
+<mapper namespace="tilestest">
+	
+	<select id="getImgFilenameList" resultType="String">
+		select imgfilename
+		from tilestest_img_advertise
+		order by imgno desc
+	</select>
+	
+	
+	<resultMap type="HashMap" id="getProductNameListMap">
+		<result property="PRODUCTNAME" column="productname" javaType="String" />
+	</resultMap>
+	<select id="getProductNameList" resultMap="getProductNameListMap">
+		select productname
+        from tilestest_product
+        order by productno
+	</select>
+	
+	
+	<resultMap type="HashMap" id="getProductDetailNameListMap">
+		<result property="PRODUCTDETAILTYPENO"    column="productdetailtypeno"    javaType="String" />
+		<result property="PRODUCTDETILNAME"       column="productdetailname"      javaType="String" />
+	</resultMap>
+	<select id="getProductDetailNameList" parameterType="String" resultMap="getProductDetailNameListMap">
+		select productdetailtypeno, productdetailname
+		from tilestest_productDetail
+		where fk_productno = ( select productno
+		                       from tilestest_product
+		                       where productname = #{productname} )
+	</select>
+	
+	<!-- ///////////////////////////////////////////////////////////// -->
+	
+	<select id="getProductno" parameterType="String" resultType="String">
+		select productno
+        from tilestest_product
+        where productname = #{productname}
+	</select>
+	
+	<select id="getProductDetailno" parameterType="HashMap" resultType="String">
+		select productDetailno
+		from tilestest_productDetail
+		where fk_productno = #{productno} and
+		      productDetailTypeNo = #{productDetailTypeNo}
+	</select>
+	
+	<insert id="set_tilestest_order" parameterType="String">
+		insert into tilestest_order(orderno, memberid, orderday) 
+		values(seq_tilestest_order.nextval, #{memberid}, default)
+	</insert>
+	
+	<insert id="set_tilestest_orderDetail" parameterType="HashMap">
+		insert into tilestest_orderDetail(orderDetailno, fk_orderno, fk_productDetailno, qty)
+		values(seq_tilestest_orderDetail.nextval, (select max(orderno) from tilestest_order), #{productDetailno}, #{oqty})
+	</insert>
+	<!-- ///////////////////////////////////////////////////////////// -->
+	
+	
+	<resultMap type="HashMap" id="rankShowJSONMap">
+		<result property="RANK"          column="rank"         javaType="String" />
+		<result property="PRODUCTNAME"   column="productname"  javaType="String" />
+		<result property="TOTALQTY"      column="totalqty"     javaType="String" />
+		<result property="PERCENT"       column="percent"      javaType="String" />
+	</resultMap>
+	<select id="rankShowJSON" resultMap="rankShowJSONMap">
+		select rank() over(order by sum(A.qty) desc) as rank,
+		       C.productname, sum(A.qty) as totalqty,
+		       trunc( sum(A.qty)/(select sum(qty) from tilestest_orderDetail) * 100, 1) as percent
+		from tilestest_orderDetail A left join tilestest_productDetail B
+		on A.fk_productDetailno = B.productDetailno
+		left join tilestest_product C
+		on B.fk_productno = C.productno
+		group by c.productname
+	</select>
+	
+	
+	
+	<resultMap type="HashMap" id="productDetailNameRankShowJSONMAP">
+		<result property="PRODUCTDETAILNAME"    column="productdetailname"   javaType="String" />
+		<result property="PERCENT"              column="percent"             javaType="String" />
+	</resultMap>
+	<select id="productDetailNameRankShowJSON" resultMap="productDetailNameRankShowJSONMAP">
+		select B.productdetailname as productdetailname, 
+		       trunc( sum(A.qty)/(select sum(qty) from tilestest_orderDetail) * 100, 1) as percent
+		from tilestest_orderDetail A left join tilestest_productDetail B
+		on A.fk_productDetailno = B.productDetailno
+		left join tilestest_product C
+		on B.fk_productno = C.productno
+		where C.productname = #{productname}
+		group by B.productdetailname
+	</select>
+	
+	
+</mapper>
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
